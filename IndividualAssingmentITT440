@@ -1,0 +1,79 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+
+#define NUM_LENGTH 10
+#define NUM_WAIT_INTERVAL 2
+
+void sigint_handler(int sig)
+{
+        printf("Please put the correct input!\n");
+}
+
+void idNum(char num[NUM_LENGTH+1])
+{
+        srand(getpid()+getppid());
+
+        num[0]=50+rand()%7;
+
+        for(int n=1;n<NUM_LENGTH;n++)
+        {
+                num[n]=49+rand()%7;
+        }
+        num[NUM_LENGTH]='\0';
+}
+
+int main(void)
+{
+        while(1)
+        {
+                void sigint_handler(int sig);
+
+                if(signal(SIGINT,sigint_handler)==SIG_ERR)
+                {
+                        perror("fork");
+                        exit(1);
+                }
+
+                int pp[2];
+                char num[NUM_LENGTH+1];
+                char buffer[NUM_LENGTH+1];
+                char s[200];
+
+                pipe(pp);
+                pid_t pid=fork();
+
+                if(pid==0)
+                {
+                        idNum(num);
+                        close(pp[0]);
+                        write(pp[1],num,NUM_LENGTH+1);
+
+                        printf("Enter your SECRET name:\n");
+                        fgets(s,200,stdin);
+                        printf("Your SECRET name is:%s\n\n",s);
+
+                        sleep(NUM_WAIT_INTERVAL);
+
+                        exit(EXIT_SUCCESS);
+                }
+
+
+                if(pid>0)
+                {
+                        wait(NULL);
+
+                        close(pp[1]);
+                        read(pp[0],buffer,NUM_LENGTH+1);
+                        close(pp[0]);
+
+                        printf("Please remember your SECRET code:%s\n\n",buffer);
+                }
+        }
+        return EXIT_SUCCESS;
+}
